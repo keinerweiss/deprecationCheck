@@ -82,7 +82,10 @@ foreach($annotations as $grepMatch) {
 	 */
 	if(preg_match('/\* @var /',$content[$line-1].$content[$line-2],$match)) {
 		$variableRemoved = true;
-		$variable = $content[$line+2];
+		$var = preg_split("/[ \t]/", trim($content[$line+2]));
+		if(!empty($var[1])) {
+			$variable = $var[1];
+		}
 	}
 
 	/**
@@ -128,5 +131,5 @@ foreach($annotations as $grepMatch) {
 	/**
 	 * Writing plain CSV line with the aggregated information
 	 */
-	echo "$filenameClean;$line;$class;$function;$variable;$static;$classRemoved;$functionRemoved;$variableRemoved;\"$message\"\r\n";
+	echo "\"$filenameClean\";$line;\"$class\";\"$function\";\"$variable\";$static;$classRemoved;$functionRemoved;$variableRemoved;\"$message\"\r\n";
 }

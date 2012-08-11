@@ -10,14 +10,15 @@
  * are considered to be "hints to check if really ..."
  * 
  * Expected file format is at least:
- * File;Line;Class;Function;Variable 1/0;Static 1/0
+ * File;Line;Class;Function;Variable 1/0;Static 1/0;Class removed 0/1;
+ *   Function removed 0/1;Variable removed 0/1;Deprecation Message
  * 
  * Resulting CSV file format is:
  * File;Line;Class;Function;Variable;Static 0/1;Class removed 0/1;
  *   Function removed 0/1;Variable removed 0/1;Deprecation Message
  * 
  * Usage:
- * php checkForUsedDeprecates.php /path/to/dir allDeprecates.csv
+ * php checkForUsedDeprecates.php /path/to/dir allDeprecates.csv > problems.csv
  */
 
 $dir = $argv[1];
@@ -37,12 +38,24 @@ echo "Call;Filename;Line;Code;Reason\r\n";
  * grep for it.
  */
 while($row = fgetcsv($fp,1024,';')) {
+	if(count($row)<6) continue;
+
+	$grep  = array();
 	$calls = array();
-	$static = $row[4];
+	$static = $row[5];
 	$class = $row[2];
 	$method = $row[3];
-	$reason = $row[5];
+	$reason = $row[9];
 	
+	/**
+	 * Eliminate typical false positives due to to general naming 
+	 * ambiguity: these functions are not being checked for deprecation
+	 */
+	if($method == 'stdWrap') continue;
+	if($method == '__call') continue;
+	if($method == '__construct') continue;
+	if($method == 'render') continue;
+
 	/**
 	 * grep for signatures of
 	 * - static method calls
@@ -50,17 +63,17 @@ while($row = fgetcsv($fp,1024,';')) {
 	 * - class instatiation via factory (in quotes)
 	 */
 	if($static && $class && $method) {
-		$grep = 'grep -rne \''.escapeshellarg($class.'::'.$method).'(\' '.escapeshellarg($dir);
+		$grep = 'grep -rne \''.escapeshellcmd($class.'::'.$method).'(\' '.escapeshellcmd($dir);
 	} elseif($class && $method) {
-		$grep = 'grep -rne \'->'.escapeshellarg($method).'(\' '.escapeshellarg($dir);
+		$grep = 'grep -rne \'->'.escapeshellcmd($method).'(\' '.escapeshellcmd($dir);
 	} elseif($class && !$method) {
 		// might be the whole class or variable
-		$grep = 'grep -rne "[(]\''.escapeshellarg($class).'\'" '.escapeshellarg($dir);
+		$grep = 'grep -rne "[(]\''.escapeshellcmd($class).'\'" '.escapeshellcmd($dir);
 	} else {
 		continue;
 	}
 	exec($grep, $calls);
-	
+
 	if(!count($calls)) continue;
 	
 	/**
@@ -69,19 +82,11 @@ while($row = fgetcsv($fp,1024,';')) {
 	 */
 	foreach($calls as $grepMatch) {
 		/**
-		 * Eliminate typical false positives due to to general naming 
-		 * Fuzziness: these functions are not being checked for deprecation
-		 */
-		if($method == 'stdWrap') continue;
-		if($method == '__construct') continue;
-		if($method == 'render') continue;
-
-		/**
 		 * Extracting grep match information 
 		 */
 		$parts = explode(':',$grepMatch,3);
 		$filename = realpath($parts[0]);
-		$line = $parts[0];
+		$line = $parts[1];
 		if(substr($filename,-3) != 'php') continue;
 		
 		/** 
@@ -91,8 +96,8 @@ while($row = fgetcsv($fp,1024,';')) {
 		 * found in the file
 		 */
 		$code = explode("\r",$parts[2]);
-		$code = $parts[2][0];
-		$code = trim($parts[2]);
+		$code = $code[0];
+		$code = trim($code);
 		
 		/**
 		 * Eliminating code most probably being commented out 
@@ -109,7 +114,7 @@ while($row = fgetcsv($fp,1024,';')) {
 			$ext = 'extNoMatch';
 		}
 		*/
-		echo "$class.'::'.$method;\"$filename\";$line;\"$code\";\"$reason\"\r\n";
+		echo "$class::$method;\"$filename\";$line;\"".str_replace('"','""',$code)."\";\"".str_replace('"','""',$reason)."\"\r\n";
 	}
 }
 fclose($fp);
