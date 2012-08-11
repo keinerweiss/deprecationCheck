@@ -20,11 +20,12 @@ piped to a file.
 It utilizes Linux `grep` on command shell.
 
 The resulting CSV file format is:
-	File;Line;Class;Function;Variable;Static 0/1;Class removed 0/1;Function removed 0/1;Variable removed 0/1;Deprecation Message
+    File;Line;Class;Function;Variable;Static 0/1;Class removed 0/1;Function removed 0/1;Variable removed 0/1;Deprecation Message
 
 Usage:
-	php locateDeprecates.php /path/to/dir > allDeprecates.csv  
-
+    php locateDeprecates.php /path/to/dir > allDeprecates.csv  
+Example:
+    php locateDeprecates.php ../typo3_src-4.7.2 > allDeprecates.csv  
 
 Check files for calls to the located functions
 ----------------------------------------------
@@ -40,11 +41,12 @@ are considered to be "hints to check if really ..." since function names
 may be used across many classes in same notation.
 
 Expected file format is at least:
-	File;Line;Class;Function;Variable;Static 1/0
+    File;Line;Class;Function;Variable;Static 1/0
 
 Resulting CSV file format is:
-	File;Line;Class;Function;Variable;Static 0/1;Class removed 0/1;Function removed 0/1;Variable removed 0/1;Deprecation Message
+    File;Line;Class;Function;Variable;Static 0/1;Class removed 0/1;Function removed 0/1;Variable removed 0/1;Deprecation Message
 
 Usage:
-	php checkForUsedDeprecates.php /path/to/dir allDeprecates.csv
-
+    php checkForUsedDeprecates.php /path/to/dir allDeprecates.csv
+Example:
+    php locateDeprecates.php ../myProject/typo3conf/ext allDeprecates.csv > problems.csv 
